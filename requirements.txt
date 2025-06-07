@@ -1,10 +1,7 @@
 streamlit
+pandas
+streamlit_geolocation
+openai
 langchain
-langchain_community
-langchain_openai
-langchain_core
-langchain-chroma
-
-pypdf
-langchain-text-splitters
+faiss-cpu
 
