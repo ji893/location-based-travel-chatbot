@@ -17,13 +17,13 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # --- Streamlit 페이지 설정 및 커스텀 CSS ---
 st.set_page_config(page_title="나만의 여행 플래너", layout="wide", initial_sidebar_state="expanded")
 
 # 커스텀 CSS 정의
-# 여기서 불필요하거나 잘못된 문자를 제거했습니다.
 st.markdown(
     """
     <style>
@@ -290,7 +290,8 @@ def load_specific_tour_data(file_paths_list):
     combined_df = pd.DataFrame()
     if not file_paths_list:
         st.error("로드할 관광지 CSV 파일 경로가 지정되지 않았습니다. `TOUR_CSV_FILES`를 확인해주세요.")
-        st.stop()
+    st.stop() # 이 부분은 앱이 시작될 때 `TOUR_CSV_FILES`가 비어있으면 바로 중단시키는 코드입니다. 일반적으로는 모든 파일이 없으면 중단하도록 두지, 그냥 비어있다고 중단시키지 않습니다.
+
     for file_path in file_paths_list:
         if not os.path.exists(file_path):
             st.warning(f"'{file_path}' 파일을 찾을 수 없어 건너뜱니다.")
@@ -389,6 +390,12 @@ def get_user_inputs_ui():
     st.markdown("---")
     st.markdown("## <span class='icon'>1️⃣</span> 사용자 정보 입력", unsafe_allow_html=True)
     
+    # st.form을 사용하면 Submit 버튼을 누르기 전까지는 위젯 값이 반환되지 않습니다.
+    # 따라서 submit_button을 if 문 밖으로 빼고, 위젯의 key를 사용하여 session_state에 직접 저장하는 것이 더 안정적입니다.
+    # 또는 form_submit_button을 사용하되, 반환되는 값들을 변수에 저장하고,
+    # 해당 변수들이 유효한지 검사한 후에 session_state에 저장하는 방식이 필요합니다.
+    # 여기서는 제출 버튼 클릭 시점에 유효성 검사를 하는 방향으로 수정합니다.
+
     with st.form("user_info_form"):
         col1, col2 = st.columns(2)
         with col1:
@@ -397,6 +404,8 @@ def get_user_inputs_ui():
             travel_style = st.multiselect("선호하는 여행 스타일 (복수 선택 가능)", ["자연", "역사", "체험", "휴식", "문화", "가족", "액티비티"], key='travel_style_multiselect')
         
         st.markdown("### 추가 여행 계획 정보")
+        # st.number_input에 min_value를 설정하고, value를 0으로 설정하면
+        # 사용자가 아무것도 입력하지 않아도 0이 기본값으로 들어가므로 유효성 검사 시 '0'을 체크해야 합니다.
         trip_duration_days = st.number_input("여행 기간 (일)", min_value=1, value=3, key='trip_duration')
         estimated_budget = st.number_input("예상 예산 (원, 총 금액)", min_value=0, value=500000, step=10000, key='estimated_budget')
         num_travelers = st.number_input("여행 인원 (명)", min_value=1, value=2, key='num_travelers')
@@ -404,6 +413,26 @@ def get_user_inputs_ui():
         
         submitted_user_info = st.form_submit_button("다음 단계로 이동 👉")
 
+        # **오류 발생 지점 수정: 필수 입력값 유효성 검사 추가**
+        if submitted_user_info:
+            if trip_duration_days < 1:
+                st.error("여행 기간은 1일 이상으로 입력해야 합니다.")
+            elif estimated_budget < 0: # 예산은 0 이상이므로 0보다 작은 값은 에러 처리
+                st.error("예상 예산은 0원 이상으로 입력해야 합니다.")
+            elif num_travelers < 1:
+                st.error("여행 인원은 1명 이상으로 입력해야 합니다.")
+            else:
+                # 모든 값이 유효할 때만 session_state에 저장하고 다음 단계로 진행
+                st.session_state.age = age
+                st.session_state.travel_style_list = travel_style
+                st.session_state.trip_duration_days = trip_duration_days
+                st.session_state.estimated_budget = estimated_budget # 여기가 문제의 612번 라인일 가능성 있음
+                st.session_state.num_travelers = num_travelers
+                st.session_state.special_requests = special_requests
+                st.session_state.current_step = "get_location" # 다음 단계로 이동
+                st.rerun() # 변경된 세션 상태를 적용하기 위해 앱을 재실행
+
+    # 함수는 위젯에서 가져온 현재 값만 반환합니다. 제출 여부는 submitted_user_info 변수를 통해 메인 로직에서 처리합니다.
     return age, travel_style, trip_duration_days, estimated_budget, num_travelers, special_requests, submitted_user_info
 
 def get_location_ui():
@@ -428,19 +457,25 @@ def get_location_ui():
         st.warning("⚠️ 위치 정보를 사용할 수 없습니다. 수동으로 위도, 경도를 입력해 주세요.")
 
     with st.expander("직접 위치 입력하기 (선택 사항)", expanded=(user_lat_final is None or user_lon_final is None)):
+        # session_state에 이미 저장된 값이 있다면 기본값으로 사용
         default_lat = st.session_state.get("user_lat", 37.5665) # 서울 시청 기본 위도
         default_lon = st.session_state.get("user_lon", 126.9780) # 서울 시청 기본 경도
 
         manual_lat = st.number_input("위도", value=float(default_lat), format="%.7f", key="manual_lat_input")
         manual_lon = st.number_input("경도", value=float(default_lon), format="%.7f", key="manual_lon_input")
 
+        # 사용자가 수동으로 0이 아닌 값을 입력하면 그 값을 최종 위도/경도로 사용
         if manual_lat != 0.0 or manual_lon != 0.0:
             user_lat_final = manual_lat
             user_lon_final = manual_lon
             st.info(f"수동 설정된 위치: 위도 {user_lat_final:.7f}, 경도 {user_lon_final:.7f}")
         else:
-            if user_lat_final is None or user_lon_final is None: # 자동 위치 실패 시에만 에러
+            # 자동 위치 정보가 없거나 0.0인 경우 에러 표시
+            if user_lat_final is None or user_lon_final is None or (user_lat_final == 0.0 and user_lon_final == 0.0):
                 st.error("❌ 유효한 위도 및 경도 값이 입력되지 않았습니다. 0이 아닌 값을 입력해주세요.")
+                user_lat_final = None # 유효하지 않은 경우 None으로 설정
+                user_lon_final = None # 유효하지 않은 경우 None으로 설정
+                
 
     st.session_state.user_lat = user_lat_final
     st.session_state.user_lon = user_lon_final
@@ -603,17 +638,10 @@ if __name__ == "__main__":
     # 1. 사용자 정보 입력 단계
     elif st.session_state.current_step == "user_info":
         st.subheader("여행을 위한 기본 정보를 알려주세요.")
+        # get_user_inputs_ui 함수에서 제출 버튼 클릭 시 세션 상태에 저장하고 rerun하므로
+        # 여기서는 변수만 호출하면 됩니다.
         age, travel_style_list, trip_duration_days, estimated_budget, num_travelers, special_requests, submitted_user_info = get_user_inputs_ui()
-        
-        if submitted_user_info:
-            st.session_state.age = age
-            st.session_state.travel_style_list = travel_style_list
-            st.session_state.trip_duration_days = trip_duration_days
-            st.session_state.estimated_budget = estimated_budget
-            st.session_state.num_travelers = num_travelers
-            st.session_state.special_requests = special_requests
-            st.session_state.current_step = "get_location" # 다음 단계로 이동
-            st.rerun()
+        # submitted_user_info를 여기서 다시 체크할 필요 없이, 함수 내부에서 이미 처리됩니다.
 
     # 2. 위치 정보 입력 단계
     elif st.session_state.current_step == "get_location":
@@ -621,11 +649,12 @@ if __name__ == "__main__":
         current_user_lat, current_user_lon, submitted_location = get_location_ui()
 
         if submitted_location:
-            if current_user_lat is None or current_user_lon is None:
+            # get_location_ui 내부에서 user_lat_final, user_lon_final이 None이 될 수 있으므로 다시 검사
+            if st.session_state.user_lat is None or st.session_state.user_lon is None:
                 st.error("위치 정보가 유효하지 않습니다. 다시 시도해주세요.")
             else:
-                st.session_state.current_user_lat = current_user_lat
-                st.session_state.current_user_lon = current_user_lon
+                st.session_state.current_user_lat = st.session_state.user_lat
+                st.session_state.current_user_lon = st.session_state.user_lon
                 st.session_state.current_step = "get_query" # 다음 단계로 이동
                 st.rerun()
         
@@ -639,6 +668,7 @@ if __name__ == "__main__":
         user_query, submitted_query = get_query_ui(st.session_state.current_input)
 
         if submitted_query:
+            # 세션 상태에 저장된 값들을 사용
             lat_to_invoke = st.session_state.current_user_lat
             lon_to_invoke = st.session_state.current_user_lon
 
@@ -781,7 +811,7 @@ if __name__ == "__main__":
                         st.error(f"❌ 체인 호출 중 오류 발생: {ve}. 입력 키를 확인해주세요.")
                     except Exception as e:
                         st.error(f"❌ 예상치 못한 오류 발생: {e}")
-        
+                
         # 이전 단계로 돌아가는 버튼
         if st.button("👈 이전 단계로 (위치 정보)", key="back_to_location"):
             st.session_state.current_step = "get_location"
