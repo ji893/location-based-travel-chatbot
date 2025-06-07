@@ -5,6 +5,7 @@ from math import radians, sin, cos, sqrt, atan2
 import os
 import re
 import glob
+import io # 추가: StringIO를 위해 임포트
 
 # Langchain 관련 import
 from langchain.chains.retrieval import create_retrieval_chain
@@ -53,15 +54,14 @@ def setup_environment():
     로컬 환경에서는 .env 파일을 로드하거나 시스템 환경 변수에서 가져옵니다.
     """
     if 'OPENAI_API_KEY' in st.secrets:
-        st.success("✅ OpenAI API 키를 Streamlit Secrets에서 성공적으로 로드했습니다.")
         return st.secrets['OPENAI_API_KEY']
     else:
         load_dotenv() # 로컬 개발 시 .env 파일에서 로드 시도
         api_key = os.getenv("OPENAI_API_KEY")
         if api_key:
-            st.success("✅ OpenAI API 키를 환경 변수(.env 파일 또는 시스템 환경 변수)에서 성공적으로 로드했습니다.")
+            pass # 성공 메시지를 출력하지 않도록 변경
         else:
-            st.error("❌ OpenAI API 키를 찾을 수 없습니다. Streamlit Cloud에서는 secrets.toml에 키를 설정하거나, 로컬에서는 .env 파일을 확인해주세요.")
+            st.error("❌OpenAI API 키를 찾을 수 없습니다. Streamlit Cloud에서는 secrets.toml에 키를 설정하거나, 로컬에서는 .env 파일을 확인해주세요.")
         return api_key
 
 
@@ -71,7 +71,7 @@ def initialize_streamlit_app():
 
 # --- 2. 데이터 로드 및 전처리 함수 ---
 @st.cache_data
-def load_specific_tour_data(file_paths_list): # utf8_files 파라미터 제거
+def load_specific_tour_data(file_paths_list):
     """지정된 CSV 파일 목록을 로드하고, 모든 파일에 CP949 인코딩을 적용하여 병합합니다."""
     combined_df = pd.DataFrame()
 
@@ -92,7 +92,7 @@ def load_specific_tour_data(file_paths_list): # utf8_files 파라미터 제거
             df.columns = df.columns.str.strip()
 
             if "위도" not in df.columns or "경도" not in df.columns:
-                st.warning(f"'{os.path.basename(file_path)}' 파일은 '위도', '경도' 컬럼이 없어 건너뜁니다.")
+                st.warning(f"'{os.path.basename(file_path)}' 파일은 '위도', '경도' 컬럼이 없어 건너뜱니다.")
                 continue
 
             name_col = None
@@ -100,12 +100,10 @@ def load_specific_tour_data(file_paths_list): # utf8_files 파라미터 제거
                 if candidate in df.columns:
                     name_col = candidate
                     break
-
             if name_col is None:
                 df["관광지명"] = "이름 없음"
             else:
                 df["관광지명"] = df[name_col]
-
             address_col = None
             for candidate in ["정제도로명주소","정제지번주소","소재지도로명주소","소재지지번주소","관광지소재지지번주소","관광지소재지도로명주소"]:
                 if candidate in df.columns:
@@ -133,12 +131,12 @@ def load_specific_tour_data(file_paths_list): # utf8_files 파라미터 제거
 
 # --- 벡터스토어 로딩 및 캐싱 ---
 @st.cache_resource
-def load_and_create_vectorstore_from_specific_files(tour_csv_files_list): # utf8_files 파라미터 제거
+def load_and_create_vectorstore_from_specific_files(tour_csv_files_list):
     """지정된 CSV 파일 목록을 사용하여 벡터스토어를 생성합니다."""
     all_city_tour_docs = []
     for file_path in tour_csv_files_list:
         if not os.path.exists(file_path):
-            st.warning(f"벡터스토어 생성을 위해 '{file_path}' 파일을 찾을 수 없어 건너뜁니다.")
+            st.warning(f"벡터스토어 생성을 위해 '{file_path}' 파일을 찾을 수 없어 건너뜱니다.")
             continue
 
         # 모든 파일에 CP949 인코딩 적용
@@ -164,13 +162,10 @@ def load_and_create_vectorstore_from_specific_files(tour_csv_files_list): # utf8
     return vectorstore
 
 @st.cache_resource()
-def get_vectorstore_cached(tour_csv_files_list): # utf8_files 파라미터 제거
+def get_vectorstore_cached(tour_csv_files_list):
     """캐시된 벡터스토어를 로드하거나 새로 생성합니다."""
-    cache_key = tuple(sorted(tour_csv_files_list)) # 캐시 키에서 utf8_files 제거
-
     if os.path.exists(VECTOR_DB_PATH):
         try:
-            st.info("기존 벡터 DB를 로드 중...")
             return FAISS.load_local(
                 VECTOR_DB_PATH,
                 OpenAIEmbeddings(),
@@ -178,10 +173,9 @@ def get_vectorstore_cached(tour_csv_files_list): # utf8_files 파라미터 제�
             )
         except Exception as e:
             st.warning(f"기존 벡터 DB 로딩 실패: {e}. 새로 생성합니다.")
-            return load_and_create_vectorstore_from_specific_files(tour_csv_files_list) # 인자 제거
+            return load_and_create_vectorstore_from_specific_files(tour_csv_files_list)
     else:
-        st.info("새로운 벡터 DB를 생성 중...")
-        return load_and_create_vectorstore_from_specific_files(tour_csv_files_list) # 인자 제거
+        return load_and_create_vectorstore_from_specific_files(tour_csv_files_list)
 
 
 # --- Haversine distance function ---
@@ -283,7 +277,7 @@ def get_qa_chain(_vectorstore):
     * 주소: [주소]
     * 주요 시설/특징: [정보]
     **[참고: 사용자 위치 기준 거리는 시스템이 자동으로 계산하여 추가할 것이므로, 이 항목은 제외합니다.]**
-     
+    
 2.  **추천된 관광지를 포함하여, 사용자 정보와 질문에 기반한 {trip_duration_days}일간의 상세 여행 계획을 일자별로 구성해 주세요.**
     * 각 날짜별로 방문할 장소(식당, 카페, 기타 활동 포함), 예상 시간, 간단한 활동 내용을 포함하세요.
     * 예산을 고려하여 적절한 식사 장소나 활동을 제안할 수 있습니다.
@@ -300,15 +294,15 @@ def get_qa_chain(_vectorstore):
   - 주요 시설/특징: [정보 2]
 
 **상세 여행 계획 ({trip_duration_days}일):**
-
-**1일차:**
-- 오전 (9:00 - 12:00): [관광지명 1] 방문 (예: 역사 탐방, 박물관 관람).
-- 점심 (12:00 - 13:00): [근처 식당명] (예: 한식 맛집, {estimated_budget}원에 적합한 메뉴)
-- 오후 (13:00 - 17:00): [관광지명 2] 방문 (예: 자연 경관 감상, 산책). [관광지명 1]에서 버스 30분 이동.
-- 저녁 (17:00 이후): [특정 활동 또는 자유 시간]
-
-**2일차:**
-- ... (이후 날짜별 계획) ...
+다음 표 형식으로 일자별 상세 계획을 작성해 주세요. 컬럼명은 '일차', '시간', '활동', '예상 장소', '이동 방법'으로 해주세요.
+| 일차 | 시간 | 활동 | 예상 장소 | 이동 방법 |
+|---|---|---|---|---|
+| 1일차 | 오전 (9:00 - 12:00) | [활동 내용] | [장소명] | [이동 방법] |
+| 1일차 | 점심 (12:00 - 13:00) | [식사] | [식당명] | - |
+| 1일차 | 오후 (13:00 - 17:00) | [활동 내용] | [장소명] | [이동 방법] |
+| 1일차 | 저녁 (17:00 이후) | [활동 내용] | [장소명 또는 자유 시간] | - |
+| 2일차 | ... | ... | ... | ... |
+**중요: '일차' 컬럼의 경우, 같은 일차의 여러 활동이 있을 경우 첫 번째 활동에만 해당 '일차'를 명시하고, 나머지 활동 행의 '일차' 셀은 비워두세요 (예: "| | 시간 | 활동 | 예상 장소 | 이동 방법 |"). 이렇게 해야 표에서 '일차'가 자동으로 병합되어 보입니다.**
 """
     )
     document_chain = create_stuff_documents_chain(llm, qa_prompt)
@@ -326,119 +320,213 @@ if __name__ == "__main__":
 
     initialize_streamlit_app()
 
-    vectorstore = get_vectorstore_cached(TOUR_CSV_FILES) # 인자 제거
+    vectorstore = get_vectorstore_cached(TOUR_CSV_FILES)
+
+    # --- 세션 상태 초기화 및 이전 대화 기록 관리 ---
+    if "conversations" not in st.session_state or "messages" in st.session_state:
+        st.session_state.conversations = []
+        if "messages" in st.session_state:
+            del st.session_state.messages
+        st.session_state.current_input = ""
+        st.session_state.selected_conversation_index = None
+
     qa_chain = get_qa_chain(vectorstore)
+    tour_data_df = load_specific_tour_data(TOUR_CSV_FILES)
 
-    tour_data_df = load_specific_tour_data(TOUR_CSV_FILES) # 인자 제거
+    # Sidebar for previous conversations
+    with st.sidebar:
+        st.subheader("💡이전 대화")
+        if st.session_state.conversations:
+            for i, conv in enumerate(reversed(st.session_state.conversations)):
+                original_index = len(st.session_state.conversations) - 1 - i
+                
+                if 'travel_style_selected' in conv and conv['travel_style_selected'] and conv['travel_style_selected'] != '특정 없음':
+                    preview_text = f"성향: {conv['travel_style_selected']}"
+                    if len(preview_text) > 25: 
+                        preview_text = preview_text[:22] + '...'
+                else:
+                    preview_text = conv['user_query'][:25] + ('...' if len(conv['user_query']) > 25 else '')
+                    
+                if st.button(f"대화 {original_index + 1}: {preview_text}", key=f"sidebar_conv_{original_index}"):
+                    st.session_state.selected_conversation_index = original_index
+                    st.rerun()
 
-    age, travel_style_list, current_user_lat, current_user_lon, \
-    trip_duration_days, estimated_budget, num_travelers, special_requests = get_user_inputs_ui()
-
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-    if "current_input" not in st.session_state:
-        st.session_state.current_input = ""
-
-    st.header("② 질문하기")
-    user_query = st.text_input("어떤 여행을 계획하고 계신가요? (예: 가족과 함께 즐길 수 있는 자연 테마 여행)", value=st.session_state.current_input, key="user_input")
-
-    if st.button("여행 계획 추천받기"):
-        st.session_state.messages.append({"role": "user", "content": user_query})
-
-        lat_to_invoke = current_user_lat
-        lon_to_invoke = current_user_lon
-
-        age_to_invoke = age
-        travel_style_to_invoke = ', '.join(travel_style_list) if travel_style_list else '특정 없음'
-        trip_duration_days_to_invoke = trip_duration_days
-        estimated_budget_to_invoke = estimated_budget
-        num_travelers_to_invoke = num_travelers
-        special_requests_to_invoke = special_requests
-
-        st.write(f"**DEBUG: Invoke Parameters**")
-        st.write(f"input (query): {user_query}")
-        st.write(f"age: {age_to_invoke}")
-        st.write(f"travel_style: {travel_style_to_invoke}")
-        st.write(f"user_lat: {lat_to_invoke}")
-        st.write(f"user_lon: {lon_to_invoke}")
-        st.write(f"trip_duration_days: {trip_duration_days_to_invoke}")
-        st.write(f"estimated_budget: {estimated_budget_to_invoke}")
-        st.write(f"num_travelers: {num_travelers_to_invoke}")
-        st.write(f"special_requests: {special_requests_to_invoke}")
-
-
-        if lat_to_invoke is None or lon_to_invoke is None:
-            st.warning("위치 정보가 없으므로 답변을 생성할 수 없습니다. 위치 정보를 입력하거나 가져와 주세요.")
-            st.session_state.messages.append({"role": "assistant", "content": "위치 정보가 없으므로 답변을 생성할 수 없습니다."})
-        elif not user_query.strip():
-            st.warning("질문을 입력해주세요.")
-            st.session_state.messages.append({"role": "assistant", "content": "질문을 입력해주세요."})
         else:
-            with st.spinner("최적의 여행 계획을 수립 중입니다..."):
-                try:
-                    response = qa_chain.invoke({
-                        "input": user_query,
-                        "age": age_to_invoke,
-                        "travel_style": travel_style_to_invoke,
-                        "user_lat": lat_to_invoke,
-                        "user_lon": lon_to_invoke,
-                        "trip_duration_days": trip_duration_days_to_invoke,
-                        "estimated_budget": estimated_budget_to_invoke,
-                        "num_travelers": num_travelers_to_invoke,
-                        "special_requests": special_requests_to_invoke
-                    })
+            st.info("이전 대화가 없습니다.")
 
-                    rag_result_text = response["answer"]
+    # --- 메인 콘텐츠 영역 ---
+    if st.session_state.selected_conversation_index is not None:
+        st.header("이전 대화 내용")
+        
+        selected_conv = st.session_state.conversations[st.session_state.selected_conversation_index]
+        
+        st.subheader("질문:")
+        st.markdown(selected_conv['user_query'])
+        
+        if 'travel_style_selected' in selected_conv and selected_conv['travel_style_selected'] and selected_conv['travel_style_selected'] != '특정 없음':
+            st.subheader("성향:")
+            st.markdown(selected_conv['travel_style_selected'])
 
-                    processed_output_lines = []
-                    processed_place_names = set()
-
-                    for line in rag_result_text.split('\n'):
-                        name_match = re.search(r"관광지 이름:\s*(.+)", line)
-
-                        if name_match:
-                            current_place_name = name_match.group(1).strip()
-                            if current_place_name not in processed_place_names:
-                                processed_output_lines.append(line)
-                                processed_place_names.add(current_place_name)
-
-                                found_place_data = tour_data_df[
-                                    (tour_data_df['관광지명'].str.strip() == current_place_name) &
-                                    (pd.notna(tour_data_df['위도'])) &
-                                    (pd.notna(tour_data_df['경도']))
-                                ]
-
-                                if not found_place_data.empty:
-                                    place_lat = found_place_data['위도'].iloc[0]
-                                    place_lon = found_place_data['경도'].iloc[0]
-                                    distance = haversine(lat_to_invoke, lon_to_invoke, place_lat, place_lon)
-                                    processed_output_lines.append(f"- 사용자 위치 기준 거리(km): 약 {distance:.2f} km")
-                                else:
-                                    processed_output_lines.append("- 사용자 위치 기준 거리(km): 정보 없음 (데이터 불일치 또는 좌표 누락)")
-                            else:
-                                pass
-                        else:
-                            if not re.search(r"거리\(km\):", line):
-                                processed_output_lines.append(line)
-
-                    final_display_text = "\n".join(processed_output_lines)
-
-                    st.session_state.messages.append({"role": "assistant", "content": final_display_text})
-                    st.subheader("✅ 추천 결과 및 상세 여행 계획")
-                    st.markdown(final_display_text)
-
-                except ValueError as ve:
-                    st.error(f"체인 호출 중 오류 발생: {ve}. 입력 키를 확인해주세요.")
-                    st.session_state.messages.append({"role": "assistant", "content": f"오류가 발생했습니다: {ve}"})
-                except Exception as e:
-                    st.error(f"예상치 못한 오류 발생: {e}")
-                    st.session_state.messages.append({"role": "assistant", "content": f"예상치 못한 오류가 발생했습니다: {e}"})
-
-        st.session_state.current_input = ""
-
-    st.subheader("💡 이전 대화")
-    for m in reversed(st.session_state.messages):
-        role = "🙋‍♂️ 사용자" if m["role"] == "user" else "🤖 챗봇"
-        st.markdown(f"**{role}:**")
-        st.markdown(m['content'])
+        st.subheader("답변:")
+        # 이전 대화는 원본 텍스트로 보여줍니다. (표로 파싱하지 않음)
+        st.markdown(selected_conv['chatbot_response'])
+        
         st.markdown("---")
+        if st.button("새로운 대화 시작하기"):
+            st.session_state.selected_conversation_index = None
+            st.session_state.current_input = ""
+            st.rerun()
+
+    else: # 이전 대화가 선택되지 않은 경우 (새로운 질문 입력 상태)
+        age, travel_style_list, current_user_lat, current_user_lon, \
+        trip_duration_days, estimated_budget, num_travelers, special_requests = get_user_inputs_ui()
+
+        st.header("② 질문하기")
+        user_query = st.text_input("어떤 여행을 계획하고 계신가요? (예: 가족과 함께 즐길 수 있는 자연 테마 여행)", value=st.session_state.current_input, key="user_input")
+
+        if st.button("여행 계획 추천받기"):
+            st.session_state.selected_conversation_index = None 
+
+            lat_to_invoke = current_user_lat
+            lon_to_invoke = current_user_lon
+
+            age_to_invoke = age
+            travel_style_to_invoke = ', '.join(travel_style_list) if travel_style_list else '특정 없음'
+            trip_duration_days_to_invoke = trip_duration_days
+            estimated_budget_to_invoke = estimated_budget
+            num_travelers_to_invoke = num_travelers
+            special_requests_to_invoke = special_requests
+
+            if lat_to_invoke is None or lon_to_invoke is None:
+                st.warning("위치 정보가 없으므로 답변을 생성할 수 없습니다. 위치 정보를 입력하거나 가져와 주세요.")
+            elif not user_query.strip():
+                st.warning("질문을 입력해주세요.")
+            else:
+                with st.spinner("최적의 여행 계획을 수립 중입니다..."):
+                    try:
+                        response = qa_chain.invoke({
+                            "input": user_query,
+                            "age": age_to_invoke,
+                            "travel_style": travel_style_to_invoke,
+                            "user_lat": lat_to_invoke,
+                            "user_lon": lon_to_invoke,
+                            "trip_duration_days": trip_duration_days_to_invoke,
+                            "estimated_budget": estimated_budget_to_invoke,
+                            "num_travelers": num_travelers_to_invoke,
+                            "special_requests": special_requests_to_invoke
+                        })
+
+                        rag_result_text = response["answer"]
+
+                        processed_output_lines = []
+                        processed_place_names = set()
+                        table_plan_text = ""
+                        in_plan_section = False # 여행 계획 섹션인지 확인하는 플래그
+
+                        # LLM 응답에서 관광지 정보 추출 및 거리 추가 (기존 로직 유지)
+                        for line in rag_result_text.split('\n'):
+                            if "상세 여행 계획" in line and "일차 | 시간 | 활동" not in line:
+                                processed_output_lines.append(line)
+                                in_plan_section = True
+                                continue 
+
+                            if not in_plan_section:
+                                name_match = re.search(r"관광지 이름:\s*(.+)", line)
+                                if name_match:
+                                    current_place_name = name_match.group(1).strip()
+                                    if current_place_name not in processed_place_names:
+                                        processed_output_lines.append(line)
+                                        processed_place_names.add(current_place_name)
+
+                                        found_place_data = tour_data_df[
+                                            (tour_data_df['관광지명'].str.strip() == current_place_name) &
+                                            (pd.notna(tour_data_df['위도'])) &
+                                            (pd.notna(tour_data_df['경도']))
+                                        ]
+                                        if not found_place_data.empty:
+                                            place_lat = found_place_data['위도'].iloc[0]
+                                            place_lon = found_place_data['경도'].iloc[0]
+                                            distance = haversine(lat_to_invoke, lon_to_invoke, place_lat, place_lon)
+                                            processed_output_lines.append(f"- 사용자 위치 기준 거리(km): 약 {distance:.2f} km")
+                                        else:
+                                            processed_output_lines.append("- 사용자 위치 기준 거리(km): 정보 없음 (데이터 불일치 또는 좌표 누락)")
+                                else:
+                                    if not re.search(r"거리\(km\):", line):
+                                        processed_output_lines.append(line)
+                            else:
+                                # 여행 계획 섹션의 라인들을 별도로 저장 (표 파싱용)
+                                table_plan_text += line + "\n"
+
+                        # 추천 관광지 및 일반적인 정보 먼저 표시
+                        st.subheader("추천 결과 및 상세 여행 계획")
+                        st.markdown("\n".join(processed_output_lines))
+
+                        # 여행 계획 테이블 파싱 및 표시
+                        if table_plan_text.strip():
+                            try:
+                                plan_lines = table_plan_text.strip().split('\n')
+                                
+                                # Markdown 테이블의 헤더와 구분자 라인 검사
+                                if len(plan_lines) >= 2 and plan_lines[0].count('|') >= 2 and plan_lines[1].count('|') >= 2 and all(re.match(r'^-+$', s.strip()) for s in plan_lines[1].split('|') if s.strip()):
+                                    header = [h.strip() for h in plan_lines[0].split('|') if h.strip()]
+                                    data_rows = []
+                                    for row_str in plan_lines[2:]:
+                                        if row_str.strip() and row_str.startswith('|'):
+                                            # 각 셀에서 불필요한 공백 제거
+                                            # 단, 빈 셀은 그대로 빈 문자열로 유지
+                                            parsed_row = [d.strip() for d in row_str.split('|')]
+                                            # 첫 번째와 마지막 빈 문자열 제거 (split 결과)
+                                            if parsed_row and parsed_row[0] == '':
+                                                parsed_row = parsed_row[1:]
+                                            if parsed_row and parsed_row[-1] == '':
+                                                parsed_row = parsed_row[:-1]
+                                            data_rows.append(parsed_row)
+
+                                    if data_rows:
+                                        # 헤더와 데이터 컬럼 수가 다를 경우 에러 방지
+                                        if all(len(row) == len(header) for row in data_rows):
+                                            temp_plan_df = pd.DataFrame(data_rows, columns=header)
+                                            
+                                            # --- 핵심 변경: '일차' 컬럼을 인덱스로 설정하고, 중복 인덱스 숨기기 ---
+                                            if '일차' in temp_plan_df.columns:
+                                                # ` 일차 ` 컬럼의 연속적인 중복 값을 NaN으로 변경하여 시각적으로 숨김
+                                                for i in range(1, len(temp_plan_df)):
+                                                    if temp_plan_df.loc[i, '일차'] == temp_plan_df.loc[i-1, '일차']:
+                                                        temp_plan_df.loc[i, '일차'] = '' # 빈 문자열로 설정하여 숨김
+                                                
+                                                # '일차' 컬럼을 인덱스로 설정
+                                                # (주의: set_index는 복사본을 반환하므로 다시 할당해야 함)
+                                                plan_df_styled = temp_plan_df.set_index('일차')
+                                                
+                                                st.subheader("🗓️추천여행계획표")
+                                                # st.dataframe에 DataFrame Styler 사용
+                                                st.dataframe(plan_df_styled, use_container_width=True)
+                                            else:
+                                                st.subheader("🗓️추천여행계획표표")
+                                                st.dataframe(temp_plan_df, use_container_width=True)
+                                                st.warning("여행 계획에 '일차' 컬럼이 없어 그룹화하여 표시할 수 없습니다.")
+                                            # --- 핵심 변경 끝 ---
+                                        else:
+                                            st.warning("여행 계획 테이블의 행과 열의 수가 일치하지 않아 표를 생성할 수 없습니다. LLM 응답 형식을 확인해주세요.")
+                                    else:
+                                        st.warning("여행 계획 테이블 내용을 파싱할 수 없습니다. LLM이 요청된 표 형식을 따르지 않았을 수 있습니다.")
+                                else:
+                                    st.warning("여행 계획이 유효한 표 형식으로 제공되지 않았습니다.")
+                            except Exception as parse_e:
+                                st.error(f"여행 계획 테이블 파싱 중 오류 발생: {parse_e}. LLM 응답 형식을 확인해주세요.")
+                        else:
+                            st.info("상세 여행 계획이 제공되지 않았습니다.")
+                        
+                        # 새로운 대화 쌍을 저장합니다.
+                        st.session_state.conversations.append({
+                            "user_query": user_query,
+                            "chatbot_response": rag_result_text, # 원본 LLM 응답을 저장
+                            "travel_style_selected": travel_style_to_invoke
+                        })
+
+                    except ValueError as ve:
+                        st.error(f"체인 호출 중 오류 발생: {ve}. 입력 키를 확인해주세요.")
+                    except Exception as e:
+                        st.error(f"예상치 못한 오류 발생: {e}")
+
+                st.session_state.current_input = "" # 입력창 초기화
