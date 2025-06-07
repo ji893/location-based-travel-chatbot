@@ -23,7 +23,6 @@ load_dotenv()
 st.set_page_config(page_title="나만의 여행 플래너", layout="wide", initial_sidebar_state="expanded")
 
 # 커스텀 CSS 정의
-# 여기서 불필요하거나 잘못된 문자를 제거했습니다.
 st.markdown(
     """
     <style>
@@ -784,5 +783,5 @@ if __name__ == "__main__":
         
         # 이전 단계로 돌아가는 버튼
         if st.button("👈 이전 단계로 (위치 정보)", key="back_to_location"):
-            st.session_state.current_step = "get_location"
+            st.session_state.current_step = "get_location" # 'location' 단계로 돌아가도록 수정
             st.rerun()
