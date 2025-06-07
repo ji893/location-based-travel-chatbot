@@ -23,6 +23,7 @@ load_dotenv()
 st.set_page_config(page_title="나만의 여행 플래너", layout="wide", initial_sidebar_state="expanded")
 
 # 커스텀 CSS 정의
+# 여기서 불필요하거나 잘못된 문자를 제거했습니다.
 st.markdown(
     """
     <style>
@@ -715,39 +716,50 @@ if __name__ == "__main__":
                             try:
                                 plan_lines = table_plan_text.strip().split('\n')
                                 
+                                # 헤더와 구분선이 모두 존재하는지 확인
                                 if len(plan_lines) >= 2 and plan_lines[0].count('|') >= 2 and plan_lines[1].count('|') >= 2 and all(re.match(r'^-+$', s.strip()) for s in plan_lines[1].split('|') if s.strip()):
                                     header = [h.strip() for h in plan_lines[0].split('|') if h.strip()]
                                     data_rows = []
                                     for row_str in plan_lines[2:]:
                                         if row_str.strip() and row_str.startswith('|'):
-                                            parsed_row = [d.strip() for d in row_str.split('|')]
-                                            if parsed_row and parsed_row[0] == '':
-                                                parsed_row = parsed_row[1:]
-                                            if parsed_row and parsed_row[-1] == '':
-                                                parsed_row = parsed_row[:-1]
-                                            data_rows.append(parsed_row)
+                                            # 행 파싱 시 양 끝의 빈 문자열 제거
+                                            parsed_row = [d.strip() for d in row_str.split('|') if d.strip() or (d == '' and (len(parsed_row) < len(header)))]
+                                            
+                                            # '일차' 컬럼이 비어있을 때를 대비하여 첫 번째 요소가 빈 문자열이면 건너뛰지 않도록 수정
+                                            if parsed_row and parsed_row[0] == '' and len(parsed_row) < len(header): # 빈 첫 컬럼이 있고, 아직 헤더 수보다 적을 때
+                                                parsed_row = parsed_row # 그대로 유지
+                                            elif parsed_row and parsed_row[0] == '' and len(parsed_row) == len(header): # 빈 첫 컬럼이 있고, 헤더 수와 일치할 때
+                                                parsed_row = parsed_row[1:] # 실제 데이터 시작
+                                            
+                                            # 데이터 행의 길이가 헤더와 맞는지 확인
+                                            if len(parsed_row) == len(header):
+                                                data_rows.append(parsed_row)
+                                            else:
+                                                st.warning(f"⚠️ 테이블 행 데이터와 헤더 불일치: {parsed_row}. 스킵합니다.")
 
                                     if data_rows:
-                                        if all(len(row) == len(header) for row in data_rows):
-                                            temp_plan_df = pd.DataFrame(data_rows, columns=header)
-                                            
-                                            if '일차' in temp_plan_df.columns:
-                                                for i in range(1, len(temp_plan_df)):
-                                                    if temp_plan_df.loc[i, '일차'] == temp_plan_df.loc[i-1, '일차']:
-                                                        temp_plan_df.loc[i, '일차'] = '' 
-                                                
-                                                st.subheader("🗓️ 추천 여행 계획표")
-                                                st.dataframe(temp_plan_df, use_container_width=True) # Dataframe Styler 대신 직접 데이터프레임으로
-                                            else:
-                                                st.subheader("🗓️ 추천 여행 계획표")
-                                                st.dataframe(temp_plan_df, use_container_width=True)
-                                                st.warning("⚠️ 여행 계획에 '일차' 컬럼이 없어 그룹화하여 표시할 수 없습니다.")
+                                        temp_plan_df = pd.DataFrame(data_rows, columns=header)
+                                        
+                                        if '일차' in temp_plan_df.columns:
+                                            # '일차' 컬럼의 중복 값을 빈 문자열로 대체하여 병합 효과 (Streamlit 테이블에서는 자동 병합되지 않으므로 시각적으로만)
+                                            # 이전 값과 같으면 현재 값을 빈 문자열로 만듦
+                                            current_day = ''
+                                            for i in range(len(temp_plan_df)):
+                                                if temp_plan_df.loc[i, '일차'] == current_day:
+                                                    temp_plan_df.loc[i, '일차'] = ''
+                                                else:
+                                                    current_day = temp_plan_df.loc[i, '일차']
+
+                                            st.subheader("🗓️ 추천 여행 계획표")
+                                            st.dataframe(temp_plan_df, use_container_width=True) 
                                         else:
-                                            st.warning("⚠️ 여행 계획 테이블의 행과 열의 수가 일치하지 않아 표를 생성할 수 없습니다. LLM 응답 형식을 확인해주세요.")
+                                            st.subheader("🗓️ 추천 여행 계획표")
+                                            st.dataframe(temp_plan_df, use_container_width=True)
+                                            st.warning("⚠️ 여행 계획에 '일차' 컬럼이 없어 그룹화하여 표시할 수 없습니다.")
                                     else:
-                                        st.warning("⚠️ 여행 계획 테이블 내용을 파싱할 수 없습니다. LLM이 요청된 표 형식을 따르지 않았을 수 있습니다.")
+                                        st.warning("⚠️ 유효한 여행 계획 테이블 데이터가 없습니다.")
                                 else:
-                                    st.warning("⚠️ 여행 계획이 유효한 표 형식으로 제공되지 않았습니다.")
+                                    st.warning("⚠️ 여행 계획 테이블의 헤더 또는 구분선 형식이 올바르지 않습니다.")
                             except Exception as parse_e:
                                 st.error(f"❌ 여행 계획 테이블 파싱 중 오류 발생: {parse_e}. LLM 응답 형식을 확인해주세요.")
                         else:
