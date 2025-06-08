@@ -1,7 +1,7 @@
 
 🚀 시스템 개요: 데이터 처리 및 검색 흐름
 -
-저희 시스템은 다양한 형태의 관광지 데이터를 통합하고, 이를 효율적으로 검색하여 사용자의 질의에 정확하게 응답하는 것을 목표로 합니다. 이 과정은 크게 데이터 로드 및 전처리, 그리고 데이터 검색 및 벡터화단계로 나뉩니다.
+저희 시스템은 다양한 형태의 **관광지 데이터**를 통합하고, 이를 효율적으로 **검색하여 사용자의 질의에 정확하게 응답**하는 것을 목표로 합니다. 이 과정은 크게 **데이터 로드 및 전처리, 그리고 데이터 검색 및 벡터화**단계로 나뉩니다.
 
 🛠️ 데이터 로드 및 전처리 함수
 -
@@ -12,7 +12,6 @@ load_specific_tour_data 함수는 여러 CSV 파일에 분산된 관광지 정�
 def load_specific_tour_data(file_paths_list):
     """지정된 CSV 파일 목록을 로드하고, 모든 파일에 CP949 인코딩을 적용하여 병합합니다."""
     combined_df = pd.DataFrame()
-
     if not file_paths_list:
         st.error("로드할 관광지 CSV 파일 경로가 지정되지 않았습니다. `TOUR_CSV_FILES`를 확인해주세요.")
         st.stop()
@@ -70,12 +69,12 @@ def load_specific_tour_data(file_paths_list):
     return combined_df
 🎯 주요 기능
 -
-**CSV 파일 통합:**
+- **CSV 파일 통합:**
 file_paths_list에 명시된 여러 CSV 파일을 CP949 인코딩으로 로드하여 하나의 데이터프레임으로 병합합니다.
-**데이터 유효성 검사**: 각 파일에 필수 컬럼인 위도와 경도가 있는지 확인합니다.
-**컬럼 표준화**: 관광지명과 소재지도로명주소와 같이 의미는 같지만 이름이 다른 컬럼들을 표준화하여 데이터 일관성을 확보합니다.
-**오류 처리**: 파일이 없거나 로드 중 오류가 발생하면 경고 메시지를 표시하고 해당 파일을 건너뜁니다.
-**캐싱**: @st.cache_data 데코레이터를 사용하여 함수 실행 결과를 캐싱하므로, 데이터가 변경되지 않는 한 불필요한 재로딩을 방지하여 앱의 로딩 속도를 향상시킵니다
+- **데이터 유효성 검사**: 각 파일에 필수 컬럼인 위도와 경도가 있는지 확인합니다.
+- **컬럼 표준화**: 관광지명과 소재지도로명주소와 같이 의미는 같지만 이름이 다른 컬럼들을 표준화하여 데이터 일관성을 확보합니다.
+- **오류 처리**: 파일이 없거나 로드 중 오류가 발생하면 경고 메시지를 표시하고 해당 파일을 건너뜁니다.
+- **캐싱**: @st.cache_data 데코레이터를 사용하여 함수 실행 결과를 캐싱하므로, 데이터가 변경되지 않는 한 불필요한 재로딩을 방지하여 앱의 로딩 속도를 향상시킵니다
 
 🔍 데이터 검색 및 벡터화 (Retrieval)
 -
@@ -84,9 +83,9 @@ file_paths_list에 명시된 여러 CSV 파일을 CP949 인코딩으로 로드�
 **1. 다양한 CSV 파일 통합 및 벡터화**
 경기도역사관광지현황.csv, 경기도자연관광지현황.csv 등 여러 CSV 파일에 흩어진 방대한 관광지 정보를 효과적으로 활용하기 위해 다음 과정을 거칩니다.
 
-CSVLoader: LangChain의 CSVLoader를 사용하여 각 CSV 파일의 데이터를 로드합니다. 이때, cp949 인코딩을 적용하여 한글 데이터 처리의 안정성을 높입니다.
-RecursiveCharacterTextSplitter: 로드된 문서는 RecursiveCharacterTextSplitter를 이용해 일정한 크기(chunk_size=250, chunk_overlap=50)로 분할됩니다. 이는 문서의 내용을 의미 단위로 쪼개어 벡터화에 적합한 형태로 만듭니다.
-데이터 임베딩: 이 과정을 통해 관광지 데이터가 벡터 공간에 임베딩되어 저장됩니다.
+- CSVLoader: LangChain의 CSVLoader를 사용하여 각 CSV 파일의 데이터를 로드합니다. 이때, cp949 인코딩을 적용하여 한글 데이터 처리의 안정성을 높입니다.
+- RecursiveCharacterTextSplitter: 로드된 문서는 RecursiveCharacterTextSplitter를 이용해 일정한 크기(chunk_size=250, chunk_overlap=50)로 분할됩니다. 이는 문서의 내용을 의미 단위로 쪼개어 벡터화에 적합한 형태로 만듭니다.
+- 데이터 임베딩: 이 과정을 통해 관광지 데이터가 벡터 공간에 임베딩되어 저장됩니다.
 **2. FAISS를 활용한 효율적인 정보 검색**
 FAISS는 대규모 벡터 데이터를 빠르게 검색할 수 있게 해주는 라이브러리입니다. 사용자의 질의가 들어오면 다음과 같이 작동합니다.
 
@@ -131,9 +130,9 @@ def load_and_create_vectorstore_from_specific_files(tour_csv_files_list):
     return vectorstore
 
 
-코드 부분:Python
-이 코드는 CSV 파일에서 문서를 로드하고, 이를 텍스트 분할기로 처리한 뒤, OpenAI 임베딩을 사용하여 벡터화하고, 최종적으로 FAISS 벡터 스토어에 저장하는 과정을 보여줍니다. get_vectorstore_cached 함수는 이미 생성된 벡터 DB가 있다면 이를 로드하여 불필요한 재구축을 막아 성능을 최적화합니다
-
+get_vectorstore_cached 함수
+-
+이 함수는 이미 생성된 벡터 DB가 있다면 이를 로드하여 불필요한 재구축을 막아 성능을 최적화합니다.
 
 @st.cache_resource()
 def get_vectorstore_cached(tour_csv_files_list):
@@ -151,6 +150,21 @@ def get_vectorstore_cached(tour_csv_files_list):
     else:
         return load_and_create_vectorstore_from_specific_files(tour_csv_files_list)
 
+🎯 주요 기능
+-
+- **캐싱 및 재활용**: @st.cache_resource 데코레이터를 사용하여 벡터스토어 생성 작업을 캐싱합니다. get_vectorstore_cached 함수는 VECTOR_DB_PATH에 벡터스토어가 이미 존재하면 이를 로드하여 불필요한 재계산을 방지합니다.
+- ## FAISS 로컬 저장 및 로드: 
+생성된 벡터스토어는 FAISS.save_local()을 통해 지정된 경로에 저장되며, FAISS.load_local()을 통해 다시 로드될 수 있습니다. allow_dangerous_deserialization=True는 최신 FAISS 버전에서 필요한 설정입니다.
+- ## 오류 복구:
+기존 벡터스토어 로딩에 실패할 경우, 자동으로 load_and_create_vectorstore_from_specific_files 함수를 호출하여 새로 생성함으로써 시스템의 안정성을 높입니다.
+- ## 텍스트 분할 및 임베딩:
+  RecursiveCharacterTextSplitter를 사용하여 문서를 청크로 분할하고, OpenAIEmbeddings()를 사용하여 벡터로 변환하는 과정은 load_and_create_vectorstore_from_specific_files 함수 내에서 이루어집니다.
+
+
+📐 거리 계산 및 사용자 입력 처리
+-
+#  Haversine 거리 계산 함수
+haversine(lat1, lon1, lat2, lon2) 함수는 두 지점 간의 거리를 구하는 데 사용되는 **하버사인 공식(Haversine formula)**을 구현한 것입니다. 이는 지구 표면의 두 점 사이의 최단 거리를 구하는 데 유용하며,
 
 # --- Haversine distance function ---
 def haversine(lat1, lon1, lat2, lon2):
@@ -162,10 +176,21 @@ def haversine(lat1, lon1, lat2, lon2):
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     distance = R * c
     return distance
+# 🎯 주요 기능
 
-# --- 3. 사용자 입력 및 UI 로직 함수 ---
+- # 지구 반지름:
+  지구의 평균 반지름 6371km를 사용하여 거리를 계산합니다.
+- # 라디안 변환:
+  위도와 경도 값을 삼각 함수 계산을 위해 라디안 단위로 변환합니다.
+- # 거리 계산:
+  하버사인 공식을 적용하여 두 지점 간의 **대원 거리(Great-circle distance)**를 정확하게 산출합니다.
+
+사용자 입력 및 UI 로직 함수
+-
+get_user_inputs_ui() 함수는 Streamlit을 활용하여 사용자로부터 다양한 여행 관련 정보를 입력받는 UI를 제공합니다. 이 함수를 통해 수집된 정보는 LLM이 사용자 맞춤형 여행 계획을 수립하는 데 중요한 기반 데이터로 활용됩니다
 def get_user_inputs_ui():
     """사용자로부터 나이, 여행 스타일, 현재 위치, 그리고 추가 여행 계획 정보를 입력받는 UI를 표시합니다."""
+    
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.markdown("#### 사용자 정보 입력")
@@ -217,9 +242,20 @@ def get_user_inputs_ui():
 
     return age, travel_style, user_lat_final, user_lon_final, trip_duration_days, estimated_budget, num_travelers, special_requests
     
-이 코드는 RAG의 핵심입니다. 사용자의 질의와 함께 검색된 문서 (context) 그리고 다양한 사용자 입력(age, travel_style, user_lat, user_lon 등)을 포함하는 동적인 프롬프트가 구성됩니다. 이 프롬프트는 LLM (gpt-4o)이 단순한 일반 지식 답변을 넘어, 사용자의 특성과 검색된 관광지 데이터를 바탕으로 맞춤형 여행 계획을 수립하도록 지시합니다. search_kwargs={"k": 15}는 검색 시 가장 유사한 15개의 문서를 가져오도록 설정하여, LLM이 더 풍부한 정보를 기반으로 답변을 생성할 수 있게 합니다.
+💡 LLM 프롬프트 구성 및 검색 전략
+-
+이 코드에서 수집된 **사용자의 질의와 검색된 관련 문서 (context)**, 그리고 **get_user_inputs_ui() 함수를 통해 얻은 다양한 사용자 입력(나이, 여행 스타일, 현재 위치 등)**은 gpt-4o LLM의 **동적인 프롬프트**를 구성하는 핵심 요소입니다.
 
-# --- 4. 추천 로직 함수 (Langchain API 변경: create_retrieval_chain 사용) (프롬프트 수정) ---
+이를 통해 LLM은 단순히 일반적인 지식에 기반한 답변을 넘어, **사용자의 특성과 검색된 실제 관광지 데이터를 바탕으로 맞춤형 여행 계획을 수립하도록 지시**받게 됩니다.
+
+search_kwargs={"k": 15}: 벡터 스토어에서 검색 시 **가장 유사한 15개의 문서를 가져오도록 설정**합니다. 이는 LLM이 더 풍부하고 다양한 정보를 기반으로 답변을 생성할 수 있도록 하여, 답변의 질과 관련성을 크게 향상시킵니다.
+이러한 접근 방식은 RAG 아키텍처의 강점을 최대한 활용하여, 개인화되고 정확한 여행 추천 시스템을 구축하는 데 기여합니다.
+
+
+🧠 추천 로직 및 LLM 프롬프트 구성
+-
+이 섹션은 시스템의 핵심적인 추천 로직을 담당하며, LangChain의 create_retrieval_chain을 활용하여 사용자 질의에 대한 맞춤형 답변을 생성합니다. @st.cache_resource **데코레이터**를 통해 LLM 체인 객체를 효율적으로 캐싱하여 성능을 최적화합니다.
+
 @st.cache_resource
 def get_qa_chain(_vectorstore):
     llm = ChatOpenAI(model_name="gpt-4o", temperature=0.7)
@@ -287,4 +323,22 @@ def get_qa_chain(_vectorstore):
 
     return retrieval_chain
 
-
+🎯 주요 기능 및 특징
+-
+- # LLM (Large Language Model) 설정:
+ ChatOpenAI(model_name="gpt-4o", temperature=0.7)를 사용하여 OpenAI의 최신 모델인 gpt-4o를 활용합니다. temperature=0.7은 답변의 창의성을 적절하게 조절하여 너무 정형화되지 않으면서도 관련성 높은 결과를 유도합니다.
+- # 동적 프롬프트 구성:
+- 사용자 질의: {input} 변수를 통해 사용자의 직접적인 질문이 포함됩니다.
+검색된 문서 (Context): {context} 변수에 벡터 스토어에서 검색된 관련 관광지 데이터가 삽입됩니다. 이는 LLM이 실제 데이터를 기반으로 답변을 생성하게 하는 핵심 요소입니다.
+- 다양한 사용자 입력: age, travel_style, user_lat, user_lon, trip_duration_days, estimated_budget, num_travelers, special_requests 등 사용자로부터 입력받은 상세 정보들이 프롬프트에 포함됩니다.
+- 맞춤형 여행 계획 지시: 프롬프트는 LLM에게 다음과 같은 구체적인 지침을 제공하여 개인화된 답변을 유도합니다.
+- 위치 기반 우선 추천: 사용자 현재 위치에서 가까운 장소를 최우선으로 고려하여 추천하도록 명시합니다. (user_lat, user_lon 활용)
+거리 언급 제외: 시스템이 거리를 자동으로 계산하여 별도로 제공하므로, LLM의 답변에서는 거리를 직접 언급하지 않도록 지시합니다.
+추천 관광지 정보 명시: 추천 관광지의 이름, 주소, 주요 시설/특징을 포함하도록 요구합니다.
+상세 여행 계획: 여행 기간을 고려하여 일자별 상세 계획을 표 형식으로 구성하도록 지시하며, 각 날짜별 활동, 예상 장소, 이동 방법 등을 포함하도록 합니다.
+예산 고려: 예상 예산을 바탕으로 적절한 식사 장소나 활동을 제안하도록 유도합니다.
+테이블 형식 강제: 답변의 가독성을 높이기 위해 일차, 시간, 활동, 예상 장소, 이동 방법 컬럼을 가진 표 형식으로 출력하도록 명확히 지시합니다. 또한, '일차' 셀 병합을 위한 특정 형식까지 안내하여 Streamlit에서의 시각적 완성도를 높입니다.
+create_stuff_documents_chain: 검색된 모든 문서를 하나의 문자열로 묶어 LLM에 전달하는 역할을 합니다.
+_vectorstore.as_retriever(search_kwargs={"k": 15}): 벡터 스토어에서 사용자 질의와 가장 유사한 15개의 문서를 검색하도록 설정합니다. 이는 LLM이 더 풍부하고 다양한 정보를 기반으로 답변을 생성할 수 있도록 하여, 답변의 질과 관련성을 크게 향상시킵니다.
+create_retrieval_chain: retriever와 document_chain을 연결하여, 정보 검색(Retrieval)과 응답 생성(Generation)을 통합하는 RAG 파이프라인을 구축합니다.
+이러한 정교한 프롬프트 구성과 체인 설정은 단순한 정보 제공을 넘어, 사용자의 개별적인 요구사항과 현재 상황을 반영한 실제적인 여행 계획을 제안하는 데 기여합니다.
