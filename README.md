@@ -45,7 +45,7 @@
 
 ## 🚀 체험해보기
 
-[👉직접 체험해보세요](https://aiserviceteam-lucky.streamlit.app/ )
+[👉직접 체험해보세요]https://location-based-travel-chatbot-knshqspem4fkm8emluvzye.streamlit.app/
 
 
 
