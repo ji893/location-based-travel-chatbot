@@ -300,58 +300,58 @@ def setup_environment():  # 환경 설정 함수
 
 # --- 2. 데이터 로드 및 전처리 함수 ---
 
-@st.cache_data  # 캐시 사용
-def load_specific_tour_data(file_paths_list):  # 관광지 CSV 파일들 로드 함수
-    """
-    지정된 CSV 파일 목록을 로드하고, 모든 파일에 CP949 인코딩을 적용하여 병합합니다.
-    '위도', '경도', '관광지명', '소재지도로명주소' 컬럼을 필수로 추출합니다.
-    """
-    combined_df = pd.DataFrame()  # 빈 데이터프레임 생성
+@st.cache_data  # 캐시 사용
+def load_specific_tour_data(file_paths_list):  # 관광지 CSV 파일들 로드 함수
+    """
+    지정된 CSV 파일 목록을 로드하고, 모든 파일에 CP949 인코딩을 적용하여 병합합니다.
+    '위도', '경도', '관광지명', '소재지도로명주소' 컬럼을 필수로 추출합니다.
+    """
+    combined_df = pd.DataFrame()  # 빈 데이터프레임 생성
 
-    if not file_paths_list:  # 파일 리스트 없을 경우
-        st.error("로드할 관광지 CSV 파일 경로가 지정되지 않았습니다. `TOUR_CSV_FILES`를 확인해주세요.")
-        st.stop()
+    if not file_paths_list:  # 파일 리스트 없을 경우
+        st.error("로드할 관광지 CSV 파일 경로가 지정되지 않았습니다. `TOUR_CSV_FILES`를 확인해주세요.")
+        st.stop()
 
-    for file_path in file_paths_list:  # 각 파일에 대해
-        if not os.path.exists(file_path):  # 파일이 없으면
-            st.warning(f"'{file_path}' 파일을 찾을 수 없어 건너뜁니다. (Streamlit Cloud에서는 해당 파일들이 Git 리포지토리에 포함되어야 합니다.)")  # 경고 출력
-            continue
+    for file_path in file_paths_list:  # 각 파일에 대해
+        if not os.path.exists(file_path):  # 파일이 없으면
+            st.warning(f"'{file_path}' 파일을 찾을 수 없어 건너뜁니다. (Streamlit Cloud에서는 해당 파일들이 Git 리포지토리에 포함되어야 합니다.)")
+            continue
 
-        current_encoding = 'cp949'  # CP949 인코딩 사용
+        current_encoding = 'cp949'  # CP949 인코딩 사용
 
-        try:
-            df = pd.read_csv(file_path, encoding=current_encoding)  # CSV 파일 읽기
-            df.columns = df.columns.str.strip()  # 컬럼명 공백 제거
+        try:
+            df = pd.read_csv(file_path, encoding=current_encoding)  # CSV 파일 읽기
+            df.columns = df.columns.str.strip()  # 컬럼명 공백 제거
 
-            if "위도" not in df.columns or "경도" not in df.columns:  # 필수 컬럼 확인
-                st.warning(f"'{os.path.basename(file_path)}' 파일은 '위도', '경도' 컬럼이 없어 건너뜁니다.")
-                continue
+            if "위도" not in df.columns or "경도" not in df.columns:  # 필수 컬럼 확인
+                st.warning(f"'{os.path.basename(file_path)}' 파일은 '위도', '경도' 컬럼이 없어 건너뜁니다.")
+                continue
 
-            name_col = None  # 관광지명 컬럼 후보 초기화
-            for candidate in ["관광지명", "관광정보명", "관광지"]:  # 후보 순회
-                if candidate in df.columns:  # 컬럼 존재 시
-                    name_col = candidate  # 해당 컬럼 지정
-                    break
-            df["관광지명"] = df[name_col] if name_col else "이름 없음"  # 없으면 기본값
+            name_col = None
+            for candidate in ["관광지명", "관광정보명", "관광지"]:
+                if candidate in df.columns:
+                    name_col = candidate
+                    break
+            df["관광지명"] = df[name_col] if name_col else "이름 없음"
 
-            address_col = None  # 주소 컬럼 후보 초기화
-            for candidate in ["정제도로명주소", "정제지번주소", "소재지도로명주소", "소재지지번주소", "관광지소재지지번주소", "관광지소재지도로명주소"]:  # 후보 순회
-                if candidate in df.columns:  # 컬럼 존재 시
-                    address_col = candidate  # 해당 컬럼 지정
-                    break
-            df["소재지도로명주소"] = df[address_col] if address_col else "주소 없음"  # 없으면 기본값
+            address_col = None
+            for candidate in ["정제도로명주소", "정제지번주소", "소재지도로명주소", "소재지지번주소", "관광지소재지지번주소", "관광지소재지도로명주소"]:
+                if candidate in df.columns:
+                    address_col = candidate
+                    break
+            df["소재지도로명주소"] = df[address_col] if address_col else "주소 없음"
 
-            combined_df = pd.concat([combined_df, df[["위도", "경도", "관광지명", "소재지도로명주소"]]], ignore_index=True)  # 필요한 컬럼만 병합
+            combined_df = pd.concat([combined_df, df[["위도", "경도", "관광지명", "소재지도로명주소"]]], ignore_index=True)
 
-        except Exception as e:  # 예외 발생 시
-            st.warning(f"'{os.path.basename(file_path)}' 파일 ({current_encoding} 인코딩 시도) 처리 중 오류 발생: {e}")  # 경고 출력
+        except Exception as e:
+            st.warning(f"'{os.path.basename(file_path)}' 파일 ({current_encoding} 인코딩 시도) 처리 중 오류 발생: {e}")
 
-    if combined_df.empty:  # 최종 데이터가 비어있으면
-        st.error("지정된 파일들에서 유효한 관광지 데이터를 불러오지 못했습니다. `TOUR_CSV_FILES`와 파일 내용을 확인해주세요.")
-        st.stop()
+    if combined_df.empty:
+        st.error("지정된 파일들에서 유효한 관광지 데이터를 불러오지 못했습니다. `TOUR_CSV_FILES`와 파일 내용을 확인해주세요.")
+        st.stop()
 
-    combined_df.dropna(subset=['위도', '경도'], inplace=True)  # 위도, 경도 NaN 제거
-    return combined_df  # 최종 데이터 반환
+    combined_df.dropna(subset=['위도', '경도'], inplace=True)
+    return combined_df
 
 
 # --- 벡터스토어 로딩 및 캐싱 ---
