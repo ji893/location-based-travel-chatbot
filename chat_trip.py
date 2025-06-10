@@ -283,20 +283,20 @@ for f_path in TOUR_CSV_FILES:  # 필수 관광지 CSV 파일 존재 여부 확�
 
 
 # --- 1. 설정 및 초기화 함수 ---
+def setup_environment():  # 환경 설정 함수
+    """
+    환경 변수 또는 Streamlit secrets에서 OpenAI API 키를 로드합니다.
+    Streamlit Cloud 환경에서는 st.secrets를 우선적으로 사용합니다.
+    로컬 환경에서는 .env 파일을 로드하거나 시스템 환경 변수에서 가져옵니다.
+    """
+    if 'OPENAI_API_KEY' in st.secrets:  # secrets에 키가 있으면
+        return st.secrets['OPENAI_API_KEY']  # 그 키 반환
+    else:
+        api_key = os.getenv("OPENAI_API_KEY")  # 환경변수에서 키 불러오기
+        if not api_key:  # 키 없으면 에러 출력
+            st.error("❌ OpenAI API 키를 찾을 수 없습니다. Streamlit Cloud에서는 `secrets.toml`에 키를 설정하거나, 로컬에서는 `.env` 파일을 확인해주세요.")
+        return api_key  # 키 반환 또는 None
 
-def setup_environment():  # 환경 설정 함수
-    """
-    환경 변수 또는 Streamlit secrets에서 OpenAI API 키를 로드합니다.
-    Streamlit Cloud 환경에서는 st.secrets를 우선적으로 사용합니다.
-    로컬 환경에서는 .env 파일을 로드하거나 시스템 환경 변수에서 가져옵니다.
-    """
-    if 'OPENAI_API_KEY' in st.secrets:  # secrets에 키가 있으면
-        return st.secrets['OPENAI_API_KEY']  # 그 키 반환
-    else:
-        api_key = os.getenv("OPENAI_API_KEY")  # 환경변수에서 키 불러오기
-        if not api_key:  # 키 없으면 에러 출력
-            st.error("❌ OpenAI API 키를 찾을 수 없습니다. Streamlit Cloud에서는 `secrets.toml`에 키를 설정하거나, 로컬에서는 `.env` 파일을 확인해주세요.")
-        return api_key  # 키 반환 또는 None
 
 # --- 2. 데이터 로드 및 전처리 함수 ---
 
