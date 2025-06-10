@@ -845,4 +845,40 @@ else:
         age_to_invoke = age
         travel_style_to_invoke = ', '.join(travel_style_list) if travel_style_list else '특정 없음'
         trip_duration_days_to_invoke = trip_duration_days
-        estimated_budget_to_invoke = estimated
+        estimated_budget_to_invoke = estimated_budget
+        num_travelers_to_invoke = num_travelers
+        special_requests_to_invoke = special_requests
+
+        # LangChain RAG 호출 함수 호출 (비동기적 처리 가능, 여기서는 동기 처리)
+        chatbot_answer = call_langchain_rag(
+            user_query=user_query,
+            user_lat=lat_to_invoke,
+            user_lon=lon_to_invoke,
+            age=age_to_invoke,
+            travel_style=travel_style_to_invoke,
+            trip_days=trip_duration_days_to_invoke,
+            budget=estimated_budget_to_invoke,
+            travelers=num_travelers_to_invoke,
+            requests=special_requests_to_invoke
+        )
+
+        # 대화 기록 저장: 질문, 답변, 사용자 정보, 여행 스타일 등 저장
+        new_conversation = {
+            'user_query': user_query,
+            'chatbot_response': chatbot_answer,
+            'user_lat': lat_to_invoke,
+            'user_lon': lon_to_invoke,
+            'age': age_to_invoke,
+            'travel_style_selected': travel_style_to_invoke,
+            'trip_duration_days': trip_duration_days_to_invoke,
+            'estimated_budget': estimated_budget_to_invoke,
+            'num_travelers': num_travelers_to_invoke,
+            'special_requests': special_requests_to_invoke
+        }
+
+        st.session_state.conversations.append(new_conversation)
+        st.session_state.current_input = ""
+
+        # 결과 출력
+        st.subheader("💡 추천 결과:")
+        st.markdown(chatbot_answer)
