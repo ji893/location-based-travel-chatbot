@@ -277,9 +277,10 @@ TOUR_CSV_FILES = [
 # --- 초기 파일 존재 여부 확인 ---
 # 앱 시작 전 필수 데이터 파일의 존재 여부를 확인합니다.
 for f_path in TOUR_CSV_FILES:  # 필수 관광지 CSV 파일 존재 여부 확인
-    if not os.path.exists(f_path):  # 파일 존재하지 않으면
-        st.error(f"필수 데이터 파일 '{f_path}'을(를) 찾을 수 없습니다. 경로를 확인해주세요. (Streamlit Cloud에서는 해당 파일들이 Git 리포지토리에 포함되어야 합니다.)")  # 에러 메시지 출력
-        st.stop()  # 파일이 없으면 앱 실행 중지
+    if not os.path.exists(f_path):  # 파일 존재하지 않으면
+        st.error(f"필수 데이터 파일 '{f_path}'을(를) 찾을 수 없습니다. 경로를 확인해주세요. (Streamlit Cloud에서는 해당 파일들이 Git 리포지토리에 포함되어야 합니다.)")  # 에러 메시지 출력
+        st.stop()  # 파일이 없으면 앱 실행 중지
+
 
 # --- 1. 설정 및 초기화 함수 ---
 
