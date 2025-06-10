@@ -357,131 +357,131 @@ def load_specific_tour_data(file_paths_list):  # 관광지 CSV 파일들 로드 
 # --- 벡터스토어 로딩 및 캐싱 ---
 @st.cache_resource  # 벡터스토어 생성을 캐시 (Streamlit 재실행 시 재사용)
 def load_and_create_vectorstore_from_specific_files(tour_csv_files_list):  # 지정된 CSV 파일로부터 벡터스토어 생성
-    """지정된 CSV 파일 목록을 사용하여 벡터스토어를 생성합니다."""
-    all_city_tour_docs = []  # 모든 관광지 문서를 저장할 리스트
+    """지정된 CSV 파일 목록을 사용하여 벡터스토어를 생성합니다."""
+    all_city_tour_docs = []  # 모든 관광지 문서를 저장할 리스트
 
-    for file_path in tour_csv_files_list:  # 각 파일 경로에 대해
-        if not os.path.exists(file_path):  # 파일이 존재하지 않으면
-            st.warning(f"벡터스토어 생성을 위해 '{file_path}' 파일을 찾을 수 없어 건너뜁니다.")  # 경고 출력
-            continue
+    for file_path in tour_csv_files_list:  # 각 파일 경로에 대해
+        if not os.path.exists(file_path):  # 파일이 존재하지 않으면
+            st.warning(f"벡터스토어 생성을 위해 '{file_path}' 파일을 찾을 수 없어 건너뜁니다.")  # 경고 출력
+            continue
 
-        current_encoding = 'cp949'  # CP949 인코딩 사용
+        current_encoding = 'cp949'  # CP949 인코딩 사용
 
-        try:
-            city_tour_loader = CSVLoader(file_path=file_path, encoding=current_encoding, csv_args={'delimiter': ','})  # CSV 로더 생성
-            all_city_tour_docs.extend(city_tour_loader.load())  # 문서 로드 및 추가
-        except Exception as e:  # 예외 발생 시
-            st.warning(f"'{os.path.basename(file_path)}' 파일 ({current_encoding} 인코딩 시도) 로드 중 오류 발생 (벡터스토어): {e}")  # 경고 출력
+        try:
+            city_tour_loader = CSVLoader(file_path=file_path, encoding=current_encoding, csv_args={'delimiter': ','})  # CSV 로더 생성
+            all_city_tour_docs.extend(city_tour_loader.load())  # 문서 로드 및 추가
+        except Exception as e:  # 예외 발생 시
+            st.warning(f"'{os.path.basename(file_path)}' 파일 ({current_encoding} 인코딩 시도) 로드 중 오류 발생 (벡터스토어): {e}")  # 경고 출력
 
-    all_documents = all_city_tour_docs  # 전체 문서 저장
+    all_documents = all_city_tour_docs  # 전체 문서 저장
 
-    if not all_documents:  # 문서가 비어 있으면
-        st.error("벡터스토어를 생성할 문서가 없습니다. CSV 파일 경로와 내용을 확인해주세요.")  # 에러 출력 후 중단
-        st.stop()
+    if not all_documents:  # 문서가 비어 있으면
+        st.error("벡터스토어를 생성할 문서가 없습니다. CSV 파일 경로와 내용을 확인해주세요.")  # 에러 출력 후 중단
+        st.stop()
 
-    # 텍스트 분할 및 임베딩 생성
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=250, chunk_overlap=50)  # 텍스트 분할기 설정
-    docs = text_splitter.split_documents(all_documents)  # 문서 분할
-    embeddings = OpenAIEmbeddings()  # OpenAI 임베딩 사용
-    vectorstore = FAISS.from_documents(docs, embeddings)  # FAISS 벡터스토어 생성
-    vectorstore.save_local(VECTOR_DB_PATH)  # 로컬에 벡터스토어 저장
-    return vectorstore  # 벡터스토어 반환
+    # 텍스트 분할 및 임베딩 생성
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=250, chunk_overlap=50)  # 텍스트 분할기 설정
+    docs = text_splitter.split_documents(all_documents)  # 문서 분할
+    embeddings = OpenAIEmbeddings()  # OpenAI 임베딩 사용
+    vectorstore = FAISS.from_documents(docs, embeddings)  # FAISS 벡터스토어 생성
+    vectorstore.save_local(VECTOR_DB_PATH)  # 로컬에 벡터스토어 저장
+    return vectorstore  # 벡터스토어 반환
 
-@st.cache_resource()  # 벡터스토어 캐시 로딩 함수
-def get_vectorstore_cached(tour_csv_files_list):  # 벡터스토어를 캐시에서 불러오거나 새로 생성
-    """캐시된 벡터스토어를 로드하거나 새로 생성합니다."""
-    if os.path.exists(VECTOR_DB_PATH):  # 기존 벡터 DB가 존재하면
-        try:
-            return FAISS.load_local(  # 벡터 DB 로드 시도
-                VECTOR_DB_PATH,
-                OpenAIEmbeddings(),
-                allow_dangerous_deserialization=True  # 최신 LangChain 버전에서 필요
-            )
-        except Exception as e:  # 로딩 실패 시
-            st.warning(f"기존 벡터 DB 로딩 실패: {e}. 새로 생성합니다.")  # 경고 출력
-            return load_and_create_vectorstore_from_specific_files(tour_csv_files_list)  # 새로 생성
-    else:
-        return load_and_create_vectorstore_from_specific_files(tour_csv_files_list)  # 존재하지 않으면 새로 생성
+@st.cache_resource()  # 벡터스토어 캐시 로딩 함수
+def get_vectorstore_cached(tour_csv_files_list):  # 벡터스토어를 캐시에서 불러오거나 새로 생성
+    """캐시된 벡터스토어를 로드하거나 새로 생성합니다."""
+    if os.path.exists(VECTOR_DB_PATH):  # 기존 벡터 DB가 존재하면
+        try:
+            return FAISS.load_local(  # 벡터 DB 로드 시도
+                VECTOR_DB_PATH,
+                OpenAIEmbeddings(),
+                allow_dangerous_deserialization=True  # 최신 LangChain 버전에서 필요
+            )
+        except Exception as e:  # 로딩 실패 시
+            st.warning(f"기존 벡터 DB 로딩 실패: {e}. 새로 생성합니다.")  # 경고 출력
+            return load_and_create_vectorstore_from_specific_files(tour_csv_files_list)  # 새로 생성
+    else:
+        return load_and_create_vectorstore_from_specific_files(tour_csv_files_list)  # 존재하지 않으면 새로 생성
 
 # --- Haversine 거리 계산 함수 ---
-def haversine(lat1, lon1, lat2, lon2):  # 두 지점 간 거리 계산 함수
-    """두 위도/경도 지점 간의 거리를 킬로미터 단위로 계산합니다 (하버사인 공식)."""
-    R = 6371  # 지구 반지름 (킬로미터)
-    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])  # 각도를 라디안으로 변환
-    dlon = lon2 - lon1  # 경도 차이
-    dlat = lat2 - lat1  # 위도 차이
-    a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2  # 하버사인 공식 부분
-    c = 2 * atan2(sqrt(a), sqrt(1 - a))  # 중심각 계산
-    distance = R * c  # 거리 계산
-    return distance  # 결과 반환
+def haversine(lat1, lon1, lat2, lon2):  # 두 지점 간 거리 계산 함수
+    """두 위도/경도 지점 간의 거리를 킬로미터 단위로 계산합니다 (하버사인 공식)."""
+    R = 6371  # 지구 반지름 (킬로미터)
+    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])  # 각도를 라디안으로 변환
+    dlon = lon2 - lon1  # 경도 차이
+    dlat = lat2 - lat1  # 위도 차이
+    a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2  # 하버사인 공식 부분
+    c = 2 * atan2(sqrt(a), sqrt(1 - a))  # 중심각 계산
+    distance = R * c  # 거리 계산
+    return distance  # 결과 반환
 
 
 # --- 3. 사용자 입력 및 UI 로직 함수 ---
-def get_user_inputs_ui():  # 사용자 입력 UI 구성 함수
-    """사용자로부터 나이, 여행 스타일, 현재 위치, 그리고 추가 여행 계획 정보를 입력받는 UI를 표시합니다."""
-    col1, col2, col3 = st.columns([1, 2, 1])  # 3개 컬럼 레이아웃 생성
-    with col2:  # 가운데 컬럼에 입력 요소 배치
-        st.markdown("#### 🧑‍💻 사용자 정보 입력")  # 제목 마크다운
-        age = st.selectbox("나이대 선택", ["10대", "20대", "30대", "40대", "50대 이상"], key='age_selectbox')  # 나이대 선택박스
-        travel_style = st.multiselect("여행 스타일", ["자연", "역사", "체험", "휴식", "문화", "가족", "액티비티"], key='travel_style_multiselect')  # 여행 스타일 다중 선택
+def get_user_inputs_ui():  # 사용자 입력 UI 구성 함수
+    """사용자로부터 나이, 여행 스타일, 현재 위치, 그리고 추가 여행 계획 정보를 입력받는 UI를 표시합니다."""
+    col1, col2, col3 = st.columns([1, 2, 1])  # 3개 컬럼 레이아웃 생성
+    with col2:  # 가운데 컬럼에 입력 요소 배치
+        st.markdown("#### 🧑‍💻 사용자 정보 입력")  # 제목 마크다운
+        age = st.selectbox("나이대 선택", ["10대", "20대", "30대", "40대", "50대 이상"], key='age_selectbox')  # 나이대 선택박스
+        travel_style = st.multiselect("여행 스타일", ["자연", "역사", "체험", "휴식", "문화", "가족", "액티비티"], key='travel_style_multiselect')  # 여행 스타일 다중 선택
 
-    st.header("① 위치 가져오기")  # 위치 가져오기 섹션 제목
-    location = streamlit_geolocation()  # 위치 정보 요청 (streamlit_geolocation 호출)
+    st.header("① 위치 가져오기")  # 위치 가져오기 섹션 제목
+    location = streamlit_geolocation()  # 위치 정보 요청 (streamlit_geolocation 호출)
 
-    user_lat_final, user_lon_final = None, None  # 최종 위도, 경도 초기화
+    user_lat_final, user_lon_final = None, None  # 최종 위도, 경도 초기화
 
-    if location and "latitude" in location and "longitude" in location:  # 위치 정보 유효 체크
-        temp_lat = location.get("latitude")  # 위도 임시 저장
-        temp_lon = location.get("longitude")  # 경도 임시 저장
-        if temp_lat is not None and temp_lon is not None:  # 위/경도 존재 시
-            user_lat_final = temp_lat  # 최종 위도 저장
-            user_lon_final = temp_lon  # 최종 경도 저장
-            st.success(f"📍 현재 위치: 위도 **{user_lat_final:.7f}**, 경도 **{user_lon_final:.7f}**")  # 위치 정보 성공 메시지
-        else:
-            st.warning("📍 위치 정보를 불러오지 못했습니다. 수동으로 입력해 주세요.")  # 위치 정보 없음 경고
-    else:
-        st.warning("위치 정보를 사용할 수 없습니다. 수동으로 위도, 경도를 입력해 주세요.")  # 위치 정보 자체가 없을 경우 경고
+    if location and "latitude" in location and "longitude" in location:  # 위치 정보 유효 체크
+        temp_lat = location.get("latitude")  # 위도 임시 저장
+        temp_lon = location.get("longitude")  # 경도 임시 저장
+        if temp_lat is not None and temp_lon is not None:  # 위/경도 존재 시
+            user_lat_final = temp_lat  # 최종 위도 저장
+            user_lon_final = temp_lon  # 최종 경도 저장
+            st.success(f"📍 현재 위치: 위도 **{user_lat_final:.7f}**, 경도 **{user_lon_final:.7f}**")  # 위치 정보 성공 메시지
+        else:
+            st.warning("📍 위치 정보를 불러오지 못했습니다. 수동으로 입력해 주세요.")  # 위치 정보 없음 경고
+    else:
+        st.warning("위치 정보를 사용할 수 없습니다. 수동으로 위도, 경도를 입력해 주세요.")  # 위치 정보 자체가 없을 경우 경고
 
-    # 위치 정보가 없거나 0,0인 경우 수동 입력 UI 표시
-    if user_lat_final is None or user_lon_final is None or (user_lat_final == 0.0 and user_lon_final == 0.0):
-        # 세션 상태에서 기본값 가져오기 (이전 입력 유지)
-        default_lat = st.session_state.get("user_lat", 37.5665)  # 기본 위도: 서울 시청
-        default_lon = st.session_state.get("user_lon", 126.9780)  # 기본 경도: 서울 시청
+    # 위치 정보가 없거나 0,0인 경우 수동 입력 UI 표시
+    if user_lat_final is None or user_lon_final is None or (user_lat_final == 0.0 and user_lon_final == 0.0):
+        # 세션 상태에서 기본값 가져오기 (이전 입력 유지)
+        default_lat = st.session_state.get("user_lat", 37.5665)  # 기본 위도: 서울 시청
+        default_lon = st.session_state.get("user_lon", 126.9780)  # 기본 경도: 서울 시청
 
-        st.subheader("직접 위치 입력 (선택 사항)")  # 수동 위치 입력 서브타이틀
-        manual_lat = st.number_input("위도", value=float(default_lat), format="%.7f", key="manual_lat_input")  # 위도 입력란
-        manual_lon = st.number_input("경도", value=float(default_lon), format="%.7f", key="manual_lon_input")  # 경도 입력란
+        st.subheader("직접 위치 입력 (선택 사항)")  # 수동 위치 입력 서브타이틀
+        manual_lat = st.number_input("위도", value=float(default_lat), format="%.7f", key="manual_lat_input")  # 위도 입력란
+        manual_lon = st.number_input("경도", value=float(default_lon), format="%.7f", key="manual_lon_input")  # 경도 입력란
 
-        # 수동 입력값이 유효하면 최종 값으로 설정
-        if manual_lat != 0.0 or manual_lon != 0.0:
-            user_lat_final = manual_lat  # 최종 위도 재설정
-            user_lon_final = manual_lon  # 최종 경도 재설정
-            st.info(f"수동 입력 위치: 위도 **{user_lat_final:.7f}**, 경도 **{user_lon_final:.7f}**")  # 수동 입력 안내
-        else:
-            st.error("유효한 위도 및 경도 값이 입력되지 않았습니다. 0이 아닌 값을 입력해주세요.")  # 유효하지 않은 입력 에러
-            user_lat_final = None  # None으로 유지
-            user_lon_final = None
+        # 수동 입력값이 유효하면 최종 값으로 설정
+        if manual_lat != 0.0 or manual_lon != 0.0:
+            user_lat_final = manual_lat  # 최종 위도 재설정
+            user_lon_final = manual_lon  # 최종 경도 재설정
+            st.info(f"수동 입력 위치: 위도 **{user_lat_final:.7f}**, 경도 **{user_lon_final:.7f}**")  # 수동 입력 안내
+        else:
+            st.error("유효한 위도 및 경도 값이 입력되지 않았습니다. 0이 아닌 값을 입력해주세요.")  # 유효하지 않은 입력 에러
+            user_lat_final = None  # None으로 유지
+            user_lon_final = None
 
-    # 최종 결정된 위도, 경도를 세션 상태에 저장
-    st.session_state.user_lat = user_lat_final
-    st.session_state.user_lon = user_lon_final
+    # 최종 결정된 위도, 경도를 세션 상태에 저장
+    st.session_state.user_lat = user_lat_final
+    st.session_state.user_lon = user_lon_final
 
-    st.markdown("#### 📆 추가 여행 계획 정보")  # 추가 여행 계획 섹션 제목
-    trip_duration_days = st.number_input("여행 기간 (일)", min_value=1, value=3, key='trip_duration')  # 여행 기간 입력
-    estimated_budget = st.number_input("예상 예산 (원, 총 금액)", min_value=0, value=500000, step=10000, key='estimated_budget')  # 예상 예산 입력
-    num_travelers = st.number_input("여행 인원 (명)", min_value=1, value=2, key='num_travelers')  # 여행 인원 입력
-    special_requests = st.text_area("특별히 고려할 사항 (선택 사항)", help="예: 유모차 사용, 고령자 동반, 특정 음식 선호 등", key='special_requests')  # 특이사항 입력란
+    st.markdown("#### 📆 추가 여행 계획 정보")  # 추가 여행 계획 섹션 제목
+    trip_duration_days = st.number_input("여행 기간 (일)", min_value=1, value=3, key='trip_duration')  # 여행 기간 입력
+    estimated_budget = st.number_input("예상 예산 (원, 총 금액)", min_value=0, value=500000, step=10000, key='estimated_budget')  # 예상 예산 입력
+    num_travelers = st.number_input("여행 인원 (명)", min_value=1, value=2, key='num_travelers')  # 여행 인원 입력
+    special_requests = st.text_area("특별히 고려할 사항 (선택 사항)", help="예: 유모차 사용, 고령자 동반, 특정 음식 선호 등", key='special_requests')  # 특이사항 입력란
 
-    return age, travel_style, user_lat_final, user_lon_final, trip_duration_days, estimated_budget, num_travelers, special_requests  # 입력값 반환
+    return age, travel_style, user_lat_final, user_lon_final, trip_duration_days, estimated_budget, num_travelers, special_requests  # 입력값 반환
 
 # --- 4. 추천 로직 함수 (Langchain API 변경: create_retrieval_chain 사용) (프롬프트 수정) ---
-@st.cache_resource  # 추천 체인 캐시
-def get_qa_chain(_vectorstore):  # QA 체인 생성 함수
-    """
-    LangChain을 사용하여 질문-답변 체인(QA Chain)을 생성하고 캐시합니다.
-    이 체인은 사용자의 입력과 검색된 문서를 기반으로 답변을 생성합니다.
-    """
-    llm = ChatOpenAI(model_name="gpt-4o", temperature=0.7)  # GPT-4o LLM 인스턴스 생성 (온도 0.7)
+@st.cache_resource  # 추천 체인 캐시
+def get_qa_chain(_vectorstore):  # QA 체인 생성 함수
+    """
+    LangChain을 사용하여 질문-답변 체인(QA Chain)을 생성하고 캐시합니다.
+    이 체인은 사용자의 입력과 검색된 문서를 기반으로 답변을 생성합니다.
+    """
+    llm = ChatOpenAI(model_name="gpt-4o", temperature=0.7)  # GPT-4o LLM 인스턴스 생성 (온도 0.7)
 
     qa_prompt = PromptTemplate.from_template(
         """
@@ -583,8 +583,8 @@ if __name__ == "__main__":
             st.warning(f"시작 화면 이미지를 찾을 수 없습니다: {local_image_path}")
             # 대체 이미지 URL (필요 시 주석 해제 가능)
             # st.image("https://images.unsplash.com/photo-1542171124-ed989b5c3ee5?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", 
-            #          caption="여행의 시작은 비행기에서부터!", 
-            #          use_container_width=True)
+            #           caption="여행의 시작은 비행기에서부터!", 
+            #           use_container_width=True)
 
         st.write("""
         이 챗봇은 당신의 나이대, 여행 스타일, 현재 위치를 기반으로 최적의 관광지를 추천하고, 
@@ -624,27 +624,37 @@ if __name__ == "__main__":
                         query = f"{context}\n\n사용자 질문: {user_question}"
 
                         # QA 체인 실행
-                        answer = qa_chain.run(query)
-
+                        try:
+                            # LangChain의 invoke 메서드는 딕셔너리 형태로 인풋을 받습니다.
+                            response = qa_chain.invoke({"input": user_question, 
+                                                         "age": age, 
+                                                         "travel_style": ', '.join(travel_style), 
+                                                         "user_lat": user_lat, 
+                                                         "user_lon": user_lon, 
+                                                         "trip_duration_days": trip_duration, 
+                                                         "estimated_budget": budget, 
+                                                         "num_travelers": num_travelers, 
+                                                         "special_requests": special_requests})
+                            answer = response['answer']
+                        except Exception as e:
+                            st.error(f"AI 응답 생성 중 오류가 발생했습니다: {e}")
+                            answer = "죄송합니다. 답변을 생성하는 데 문제가 발생했습니다."
+                            
                         # 대화 기록에 추가
                         st.session_state.conversations.append({
                             "question": user_question,
-                            "answer": answer
+                            "answer": answer,
+                            "user_lat": user_lat, # 현재 대화의 위도 저장
+                            "user_lon": user_lon, # 현재 대화의 경도 저장
+                            "travel_style_selected": ', '.join(travel_style) if travel_style else '특정 없음', # 선택된 여행 스타일 저장
+                            "trip_duration": trip_duration,
+                            "budget": budget,
+                            "num_travelers": num_travelers,
+                            "special_requests": special_requests
                         })
-                        
-                        # 답변 출력
-                        st.markdown("### 🤖 AI 여행 플래너 답변")
-                        st.write(answer)
-
-            # 대화 기록 표시
-            if st.session_state.conversations:
-                st.markdown("## 이전 대화 기록")
-                for idx, conv in enumerate(st.session_state.conversations):
-                    st.markdown(f"**Q{idx+1}:** {conv['question']}")
-                    st.markdown(f"**A{idx+1}:** {conv['answer']}")
-
-        else:
-            st.error("위치 정보가 유효하지 않습니다. 위치를 다시 입력해 주세요.")
+                        # 새로 생성된 답변이 가장 최근 것이므로 자동으로 선택
+                        st.session_state.selected_conversation_index = len(st.session_state.conversations) - 1
+                        st.rerun() # 화면 갱신하여 새 답변 표시
 
         # 사이드바: 이전 대화 기록 관리
         with st.sidebar:
@@ -660,8 +670,9 @@ if __name__ == "__main__":
                         preview_text += f"성향: {conv['travel_style_selected']}"
                     
                     # 질문 내용 추가, 너무 길면 잘라냄
-                    if conv['user_query'].strip():
-                        query_preview = conv['user_query'].strip()
+                    # 'user_query' 대신 'question' 사용
+                    if 'question' in conv and conv['question'].strip():
+                        query_preview = conv['question'].strip()
                         if len(query_preview) > 20:
                             query_preview = query_preview[:17] + '...'
                         if preview_text: # 성향 정보가 있다면 줄바꿈
@@ -682,12 +693,13 @@ if __name__ == "__main__":
             # 새로운 대화 시작 버튼 (사이드바에 배치)
             if st.button("✨ 새로운 대화 시작하기", key="new_conversation_sidebar_button"):
                 st.session_state.selected_conversation_index = None
+                st.session_state.conversations = [] # 모든 대화 기록 초기화
                 st.session_state.current_input = ""
                 st.rerun()
 
-# --- 메인 콘텐츠 영역 ---
-
-# 이전 대화가 선택된 경우, 선택된 대화 내용을 화면에 표시
+# --- 메인 콘텐츠 영역: 선택된 대화 표시 ---
+# 이 부분은 'else: # 앱 시작 플래그가 True인 경우 챗봇 화면 표시' 블록 안에 있어야 합니다.
+# 사용자가 질문하기 버튼을 눌렀을 때만 이전 대화가 생성되도록 로직을 분리했습니다.
 if st.session_state.selected_conversation_index is not None:
     st.header("📝 이전 대화 내용")
     
@@ -696,7 +708,7 @@ if st.session_state.selected_conversation_index is not None:
     
     # 사용자 질문 부분 표시
     st.subheader("🗣️ 질문:")
-    st.markdown(f"**{selected_conv['user_query']}**")
+    st.markdown(f"**{selected_conv['question']}**") # 'user_query' 대신 'question' 사용
     
     # 선택된 여행 스타일이 있을 경우 별도 표시 (특정 없음이 아닌 경우만)
     if 'travel_style_selected' in selected_conv and selected_conv['travel_style_selected'] and selected_conv['travel_style_selected'] != '특정 없음':
@@ -707,7 +719,8 @@ if st.session_state.selected_conversation_index is not None:
     st.subheader("💡 답변:")
     
     # LLM이 생성한 응답 텍스트 가져오기
-    rag_result_text = selected_conv['chatbot_response']
+    # 'chatbot_response' 대신 'answer' 사용
+    rag_result_text = selected_conv['answer']
 
     # 출력할 텍스트 라인 저장 리스트 및 처리한 관광지명 집합 초기화
     processed_output_lines = []
@@ -785,101 +798,42 @@ if st.session_state.selected_conversation_index is not None:
                     if row_str.strip() and row_str.startswith('|'):
                         # 각 컬럼 값 파싱 및 양쪽 빈 요소 제거
                         parsed_row = [d.strip() for d in row_str.split('|') if d.strip() or d == '']
-                        if parsed_row and parsed_row[0] == '': parsed_row = parsed_row[1:]
-                        if parsed_row and parsed_row[-1] == '': parsed_row = parsed_row[:-1]
+                        # 첫 번째와 마지막 빈 문자열 제거 로직 개선 (공백으로만 된 스트링도 처리)
+                        if parsed_row and not parsed_row[0].strip(): parsed_row = parsed_row[1:]
+                        if parsed_row and not parsed_row[-1].strip(): parsed_row = parsed_row[:-1]
+
+                        # 데이터 행의 길이가 헤더와 맞지 않으면 (일차 병합 등)
+                        # 헤더 개수에 맞춰 데이터를 채워넣거나 자르는 보정 로직 추가
+                        if len(parsed_row) < len(header):
+                            parsed_row.extend([''] * (len(header) - len(parsed_row)))
+                        elif len(parsed_row) > len(header):
+                            parsed_row = parsed_row[:len(header)]
+                        
                         data_rows.append(parsed_row)
 
-                # 모든 데이터 행이 헤더 컬럼 수와 일치하는지 확인
+                # 모든 데이터 행이 헤더 컬럼 수와 일치하는지 확인 (재확인)
                 if data_rows and all(len(row) == len(header) for row in data_rows):
                     temp_plan_df = pd.DataFrame(data_rows, columns=header)
                     
                     # '일차' 컬럼이 있으면 중복된 일차 값을 빈 문자열로 바꿔서 시각적 병합 효과
                     if '일차' in temp_plan_df.columns:
-                        for i in range(1, len(temp_plan_df)):
-                            if temp_plan_df.loc[i, '일차'] == temp_plan_df.loc[i-1, '일차'] and temp_plan_df.loc[i, '일차'] != '':
+                        last_day = ""
+                        for i in range(len(temp_plan_df)):
+                            current_day = temp_plan_df.loc[i, '일차']
+                            if current_day == last_day and current_day != '':
                                 temp_plan_df.loc[i, '일차'] = ''
-                        # '일차' 컬럼을 인덱스로 설정하여 출력
-                        plan_df_styled = temp_plan_df.set_index('일차')
-                        st.subheader("🗓️ 추천 여행 계획표")
-                        st.dataframe(plan_df_styled, use_container_width=True)
-                    else:
-                        # '일차' 컬럼 없을 때 일반 테이블 출력
-                        st.subheader("🗓️ 추천 여행 계획표")
-                        st.dataframe(temp_plan_df, use_container_width=True)
-                        st.warning("여행 계획에 '일차' 컬럼이 없어 그룹화하여 표시할 수 없습니다.")
+                            else:
+                                last_day = current_day
+                    
+                    st.markdown("---")
+                    st.markdown("### 🗓️ AI가 제안하는 여행 계획표")
+                    st.dataframe(temp_plan_df, use_container_width=True)
                 else:
-                    st.warning("여행 계획 테이블의 행과 열의 수가 일치하지 않거나 데이터가 없습니다. LLM 응답 형식을 확인해주세요.")
+                    st.warning("AI가 생성한 여행 계획표 형식이 예상과 다릅니다. 원본 텍스트로 표시합니다.")
+                    st.markdown(table_plan_text)
             else:
-                st.warning("여행 계획이 유효한 표 형식으로 제공되지 않았습니다. LLM 응답 형식을 확인해주세요.")
-        except Exception as parse_e:
-            st.error(f"여행 계획 테이블 파싱 중 오류 발생: {parse_e}. LLM 응답 형식을 확인해주세요.")
-    else:
-        st.info("상세 여행 계획이 제공되지 않았습니다.")
-    
-    # 대화 내용 구분선 표시
-    st.markdown("---")
-    
-    # '새로운 대화 시작하기' 버튼 처리: 누르면 선택된 대화 인덱스를 None으로 초기화하고 입력창 비움, 화면 리로드
-    if st.button("새로운 대화 시작하기", key="new_conversation_button_after_viewing"):
-        st.session_state.selected_conversation_index = None
-        st.session_state.current_input = ""
-        st.rerun()
-
-# 이전 대화 선택이 없고, 새 질문 입력 상태인 경우
-else:
-    # 사용자 입력 UI 호출 (나이, 여행 스타일 등 입력값 수집 함수)
-    age, travel_style_list, current_user_lat, current_user_lon, \
-    trip_duration_days, estimated_budget, num_travelers, special_requests = get_user_inputs_ui()
-
-    st.header("② 질문하기")
-    # 질문 입력 텍스트 박스 표시 (세션 상태의 현재 입력값 초기값으로 세팅)
-    user_query = st.text_input("어떤 여행을 계획하고 계신가요? (예: 가족과 함께 즐길 수 있는 자연 테마 여행)", value=st.session_state.current_input, key="user_input")
-
-    # "여행 계획 추천받기" 버튼 클릭 이벤트 처리
-    if st.button("🚀 여행 계획 추천받기", key="submit_button"):
-        # 새 질문이므로 이전 대화 선택 초기화
-        st.session_state.selected_conversation_index = None
-
-        # LangChain 호출용 변수 준비
-        lat_to_invoke = current_user_lat
-        lon_to_invoke = current_user_lon
-        age_to_invoke = age
-        travel_style_to_invoke = ', '.join(travel_style_list) if travel_style_list else '특정 없음'
-        trip_duration_days_to_invoke = trip_duration_days
-        estimated_budget_to_invoke = estimated_budget
-        num_travelers_to_invoke = num_travelers
-        special_requests_to_invoke = special_requests
-
-        # LangChain RAG 호출 함수 호출 (비동기적 처리 가능, 여기서는 동기 처리)
-        chatbot_answer = call_langchain_rag(
-            user_query=user_query,
-            user_lat=lat_to_invoke,
-            user_lon=lon_to_invoke,
-            age=age_to_invoke,
-            travel_style=travel_style_to_invoke,
-            trip_days=trip_duration_days_to_invoke,
-            budget=estimated_budget_to_invoke,
-            travelers=num_travelers_to_invoke,
-            requests=special_requests_to_invoke
-        )
-
-        # 대화 기록 저장: 질문, 답변, 사용자 정보, 여행 스타일 등 저장
-        new_conversation = {
-            'user_query': user_query,
-            'chatbot_response': chatbot_answer,
-            'user_lat': lat_to_invoke,
-            'user_lon': lon_to_invoke,
-            'age': age_to_invoke,
-            'travel_style_selected': travel_style_to_invoke,
-            'trip_duration_days': trip_duration_days_to_invoke,
-            'estimated_budget': estimated_budget_to_invoke,
-            'num_travelers': num_travelers_to_invoke,
-            'special_requests': special_requests_to_invoke
-        }
-
-        st.session_state.conversations.append(new_conversation)
-        st.session_state.current_input = ""
-
-        # 결과 출력
-        st.subheader("💡 추천 결과:")
-        st.markdown(chatbot_answer)
+                st.warning("AI가 생성한 여행 계획표 형식이 예상과 다릅니다. 원본 텍스트로 표시합니다.")
+                st.markdown(table_plan_text)
+        except Exception as e:
+            st.warning(f"여행 계획표를 파싱하는 중 오류가 발생했습니다: {e}. 원본 텍스트로 표시합니다.")
+            st.markdown(table_plan_text)
